@@ -1,3 +1,7 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/dh0hst44wn6gm1v6?svg=true)](https://ci.appveyor.com/project/igi/sprReader)
+
+---
+
 # sprReader
 
 A GUI application to allow conversion of the SPR graphic files, as used by Dark Reign, to Bitmap files.
