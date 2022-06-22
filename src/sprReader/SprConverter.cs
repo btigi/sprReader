@@ -75,6 +75,7 @@ frames  frame_e2    frame_n2    frame_w2
 */
 
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -87,7 +88,8 @@ namespace sprReader
         private const int HeaderSize = 32;
         private const int FrameOrderSize = 4;
         private const int SectionSize = 16;
-        private const string Signature = "RSPR";
+        private const string SignatureSprite = "RSPR";
+        private const string SignatureShadow = "SSPR";
         private const int Version = 528;
 
         private const int DEFAULTCOLOUR = 0; // TEMP - should come from palette
@@ -107,7 +109,7 @@ namespace sprReader
         public void Parse()
         {
             var identifier = new string(sprBinaryReader.ReadChars(4));
-            if (identifier != Signature)
+            if (identifier != SignatureSprite && identifier != SignatureShadow)
             {
                 throw new InvalidOperationException($"Unhandled SPR type: {identifier}");
             }
@@ -171,54 +173,96 @@ namespace sprReader
                 var doneData = false; // whether we've completed the data reading
                 var dataPosition = 0; // position in the data array, where we write the actual image bytes
 
-                while (currentRow < height)
+
+                if (identifier == "SSPR")
                 {
-                    dataByte = sprBinaryReader.ReadByte();
-                    if (dataByte == width)
+                    bool writeColour;
+                    var runningOffset = 0;
+
+                    // Not sure how to calculate the length, so we'll use the fact that the only other thing in the file is
+                    // a single hotspot, of a fixed length, so the size muut be here to the end of the file, minus the length
+                    // of the hotspot.
+                    var pos = sprBinaryReader.BaseStream.Position;
+                    var len = sprBinaryReader.BaseStream.Length - 7;
+                    var dataLength = len - pos;
+
+                    //  D:\data\DarkReign\aopln2sh.spr
+
+                    /*
+                    The shadow sprite treats each pixel as on (coloured) or off (transparent)
+                    Read through the data bytes, with the first byte being how many off pixels to 
+                    draw, the second byte being how many on pixels to draw, the third being how
+                    many off pixels to draw and so on. The pattern resets whenever the number of
+                    pixels we have drawn matches the width of the output image.
+                    Note: If we hit a zero, the processing for this line is inverted (i.e. the first
+                    byte is how many on pixels, rather than how many off pixels)
+                    */
+
+                    var cnt = 0;
+                    var invertLevel = 0;
+                    for (int i = 0; i < dataLength; i++)
                     {
-                        // fill this row with the default colour
-                        for (int i = 0; i < width * 3; i += 3)
+                        if (runningOffset % width == 0)
                         {
-                            data[dataPosition + i] = DEFAULTCOLOUR;
-                            data[dataPosition + i + 1] = DEFAULTCOLOUR;
-                            data[dataPosition + i + 2] = DEFAULTCOLOUR;
+                            cnt = 0;
+
+                            // the first time we hit this statement, don't do anything
+                            // the second time we hit this statement, set invert to false
+                            if (invertLevel == 2)
+                            {
+                                invertLevel = 0;
+                            }
+                            if (invertLevel == 1)
+                            {
+                                invertLevel++;
+                            }
                         }
-                        dataPosition += width * 3;
-                        currentRow++;
-                    }
-                    else
-                    {
-                        if (!doneDefault)
+
+                        writeColour = cnt % 2 != 0;
+                        if (invertLevel == 2)
                         {
-                            // fill dataByte pixels with the default colour
-                            for (int i = 0; i < dataByte * 3; i += 3)
+                            writeColour = cnt % 2 == 0;
+                        }
+
+                        dataByte = sprBinaryReader.ReadByte();
+
+                        if (dataByte == default)
+                        {
+                            invertLevel = 1;
+                        }
+
+                        for (int j = 0; j < dataByte; j++)
+                        {
+                            data[runningOffset + (j * 3) + 0] = writeColour ? (byte)255 : (byte)0;
+                            data[runningOffset + (j * 3) + 1] = writeColour ? (byte)255 : (byte)0;
+                            data[runningOffset + (j * 3) + 2] = writeColour ? (byte)255 : (byte)0;
+                        }
+                        runningOffset += (dataByte * 3);
+                        cnt++;
+                    }
+                }
+
+
+                if (identifier == "RSPR")
+                {
+                    while (currentRow < height)
+                    {
+                        dataByte = sprBinaryReader.ReadByte();
+                        if (dataByte == width)
+                        {
+                            // fill this row with the default colour
+                            for (int i = 0; i < width * 3; i += 3)
                             {
                                 data[dataPosition + i] = DEFAULTCOLOUR;
                                 data[dataPosition + i + 1] = DEFAULTCOLOUR;
                                 data[dataPosition + i + 2] = DEFAULTCOLOUR;
                             }
-                            dataPosition += dataByte * 3;
-                            doneDefault = true;
-                            widthProgress = dataByte;
+                            dataPosition += width * 3;
+                            currentRow++;
                         }
                         else
                         {
-                            if (!doneData)
-                            {
-                                // fill dataByte pixels with the colours specified by the next dataByte bytes
-                                for (int i = 0; i < dataByte; i++)
-                                {
-                                    var colourByte = sprBinaryReader.ReadByte();
-                                    var colour = GetColour(colourByte);
-                                    data[dataPosition] = colour.B;
-                                    data[dataPosition + 1] = colour.G;
-                                    data[dataPosition + 2] = colour.R;
-                                    dataPosition += 3;
-                                    widthProgress += 1;
-                                }
-                                doneData = true;
-                            }
-                            else
+                            if (!doneDefault)
                             {
                                 // fill dataByte pixels with the default colour
                                 for (int i = 0; i < dataByte * 3; i += 3)
@@ -228,21 +272,52 @@ namespace sprReader
                                     data[dataPosition + i + 2] = DEFAULTCOLOUR;
                                 }
                                 dataPosition += dataByte * 3;
-                                widthProgress += dataByte;
+                                doneDefault = true;
+                                widthProgress = dataByte;
+                            }
+                            else
+                            {
+                                if (!doneData)
+                                {
+                                    // fill dataByte pixels with the colours specified by the next dataByte bytes
+                                    for (int i = 0; i < dataByte; i++)
+                                    {
+                                        var colourByte = sprBinaryReader.ReadByte();
+                                        var colour = GetColour(colourByte);
+                                        data[dataPosition] = colour.B;
+                                        data[dataPosition + 1] = colour.G;
+                                        data[dataPosition + 2] = colour.R;
+                                        dataPosition += 3;
+                                        widthProgress += 1;
+                                    }
+                                    doneData = true;
+                                }
+                                else
+                                {
+                                    // fill dataByte pixels with the default colour
+                                    for (int i = 0; i < dataByte * 3; i += 3)
+                                    {
+                                        data[dataPosition + i] = DEFAULTCOLOUR;
+                                        data[dataPosition + i + 1] = DEFAULTCOLOUR;
+                                        data[dataPosition + i + 2] = DEFAULTCOLOUR;
+                                    }
+                                    dataPosition += dataByte * 3;
+                                    widthProgress += dataByte;
 
-                                // Either we're at the end of the line, so we'll reset this anyway, or we're 
-                                // going to hit more data data, so we want to be expecting it
-                                doneData = false;
+                                    // Either we're at the end of the line, so we'll reset this anyway, or we're 
+                                    // going to hit more data data, so we want to be expecting it
+                                    doneData = false;
+                                }
                             }
                         }
-                    }
 
-                    if (widthProgress == width)
-                    {
-                        currentRow++;
-                        widthProgress = 0;
-                        doneDefault = false;
-                        doneData = false;
+                        if (widthProgress == width)
+                        {
+                            currentRow++;
+                            widthProgress = 0;
+                            doneDefault = false;
+                            doneData = false;
+                        }
                     }
                 }
 
