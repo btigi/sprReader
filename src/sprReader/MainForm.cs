@@ -9,6 +9,8 @@ namespace sprReader
 {
     public partial class MainForm : Form
     {
+        List<Bitmap> frames;
+
         public MainForm()
         {
             InitializeComponent();
@@ -18,12 +20,32 @@ namespace sprReader
         {
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
+                rtOutput.Text = "";
+                panel1.Controls.Clear();
+                frames?.Clear();
+
                 var converter = new sprConverter();
                 try
                 {
                     converter.Palette = Image.FromFile(tbPalette.Text) as Bitmap;
                     converter.Open(openFileDialog.FileName);
-                    converter.Parse();
+                    frames = converter.Parse();
+
+
+                    int yPos = 12;
+                    foreach (var f in frames)
+                    {
+                        var pictureBox = new PictureBox
+                        {
+                            Location = new Point(12, yPos),
+                            Image = f,
+                            Width = f.Size.Width,
+                            Height = f.Size.Height
+                        };
+                        yPos += f.Size.Height + 20;
+                        panel1.Controls.Add(pictureBox);
+                    }
+
                 }
                 catch (Exception ex)
                 {

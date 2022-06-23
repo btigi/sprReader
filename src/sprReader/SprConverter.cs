@@ -75,6 +75,7 @@ frames  frame_e2    frame_n2    frame_w2
 */
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -106,8 +107,10 @@ namespace sprReader
             filename = ftgFilename;
         }
 
-        public void Parse()
+        public List<Bitmap> Parse()
         {
+            var result = new List<Bitmap>();
+
             var identifier = new string(sprBinaryReader.ReadChars(4));
             if (identifier != SignatureSprite && identifier != SignatureShadow)
             {
@@ -321,7 +324,8 @@ namespace sprReader
                     }
                 }
 
-                using (var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb))
+                //using (var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb))
+                var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
                 {
                     var bData = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, bitmap.PixelFormat);
                     var size = bData.Stride * bData.Height;
@@ -350,8 +354,9 @@ namespace sprReader
                     Marshal.Copy(pixelData, 0, bData.Scan0, pixelData.Length);
                     bitmap.UnlockBits(bData);
 
-                    filename = Path.GetFileName(filename);
-                    bitmap.Save(String.Format(@"D:\data\DarkReign\{0}_{1}.bmp", filename, frame));
+                    //filename = Path.GetFileName(filename);
+                    //bitmap.Save(String.Format(@"D:\data\DarkReign\{0}_{1}.bmp", filename, frame));
+                    result.Add(bitmap);
                 }
             }
 
@@ -362,6 +367,8 @@ namespace sprReader
                 var hotSpotY = sprBinaryReader.ReadByte();
                 var unknown = sprBinaryReader.ReadByte(); // should be 0x01
             }
+
+            return result;
         }
 
         private Color GetColour(byte paleteIndex)

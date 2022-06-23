@@ -37,6 +37,7 @@
             this.lblFolder = new System.Windows.Forms.Label();
             this.tbFolder = new System.Windows.Forms.TextBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.panel1 = new System.Windows.Forms.Panel();
             this.SuspendLayout();
             // 
             // rtOutput
@@ -47,7 +48,7 @@
             this.rtOutput.Font = new System.Drawing.Font("Microsoft Sans Serif", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.rtOutput.Location = new System.Drawing.Point(12, 159);
             this.rtOutput.Name = "rtOutput";
-            this.rtOutput.Size = new System.Drawing.Size(665, 182);
+            this.rtOutput.Size = new System.Drawing.Size(645, 182);
             this.rtOutput.TabIndex = 1;
             this.rtOutput.Text = "";
             // 
@@ -117,11 +118,22 @@
             this.progressBar.Step = 1;
             this.progressBar.TabIndex = 8;
             // 
+            // panel1
+            // 
+            this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.AutoScroll = true;
+            this.panel1.Location = new System.Drawing.Point(682, 13);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(301, 328);
+            this.panel1.TabIndex = 9;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(689, 362);
+            this.ClientSize = new System.Drawing.Size(995, 362);
+            this.Controls.Add(this.panel1);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.tbFolder);
             this.Controls.Add(this.lblFolder);
@@ -130,7 +142,9 @@
             this.Controls.Add(this.tbPalette);
             this.Controls.Add(this.btnOpen);
             this.Controls.Add(this.rtOutput);
+            this.MinimumSize = new System.Drawing.Size(1011, 0);
             this.Name = "MainForm";
+            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.Text = "SprReader";
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -147,6 +161,7 @@
         private System.Windows.Forms.Label lblFolder;
         private System.Windows.Forms.TextBox tbFolder;
         private System.Windows.Forms.ProgressBar progressBar;
+        private System.Windows.Forms.Panel panel1;
     }
 }
 
